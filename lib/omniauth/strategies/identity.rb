@@ -8,6 +8,7 @@ module OmniAuth
 
       option :fields, [:name, :email]
       option :on_failed_registration, nil
+      option :validate_user, nil
 
       def request_phase
         OmniAuth::Form.build(
@@ -50,8 +51,15 @@ module OmniAuth
       def registration_phase
         attributes = (options[:fields] + [:password, :password_confirmation]).inject({}){|h,k| h[k] = request[k.to_s]; h}
         @identity = model.create(attributes)
-        if @identity.persisted?
-          env['PATH_INFO'] = callback_path
+        @create_identity = true
+
+        if options[:validate_user]
+          self.env['omniauth.identity'] = @identity
+          @create_identity = options[:validate_user].call({ env: self.env, identity: @identity })
+        end
+
+        if @identity.persisted? and @create_identity
+          self.env['PATH_INFO'] = callback_path
           callback_phase
         else
           if options[:on_failed_registration]
