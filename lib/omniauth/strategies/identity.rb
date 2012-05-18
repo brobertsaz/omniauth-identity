@@ -50,12 +50,12 @@ module OmniAuth
 
       def registration_phase
         attributes = (options[:fields] + [:password, :password_confirmation]).inject({}){|h,k| h[k] = request[k.to_s]; h}
-        @identity = model.create(attributes)
+        @identity = model.new(attributes)
         @create_identity = true
 
         if options[:validate_user]
           self.env['omniauth.identity'] = @identity
-          @create_identity = options[:validate_user].call({ env: self.env, identity: @identity })
+          @identity.save if options[:validate_user].call({ env: self.env, identity: @identity })
         end
 
         if @identity.persisted? and @create_identity
